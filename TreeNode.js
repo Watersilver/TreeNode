@@ -1,6 +1,6 @@
 class TreeNode {
   constructor() {
-    this._children = new Set(); // Array of TreeNodes
+    this._children = new Set(); // Set of TreeNodes
     this._parent = null; // TreeNode
   }
   get parent() {return this._parent;}
@@ -10,18 +10,21 @@ class TreeNode {
 
   addChild(node) {
     // Make sure "this" is not descendant of new child
-    if (this.forEachAncestor(anc => anc === node)) {
+    if (this.ascendUntil(anc => anc === node)) {
       throw Error("new child can't be TreeNode's ancestor")
     }
 
-    // Add
-    node.remove();
+    node.detach();
     this._children.add(node);
     node._parent = this;
   }
 
-  remove() {
-    if (!this._parent) return;
+  removeChild(node) {
+    return node.detach();
+  }
+
+  detach() {
+    if (!this._parent) return false;
     this._parent._children.delete(this);
     this._parent = null;
     return true;
@@ -32,27 +35,29 @@ class TreeNode {
       let stop;
       stop = callback(child);
       if (stop) return stop;
-      stop = child.forEachDescendant(callback);
+      stop = child.descendUntil(callback);
       if (stop) return stop;
     }
   }
 
   ascendUntil(callback) {
-    if (this._parent) {
-      const stop = callback(this._parent);
-      if (!stop) return this._parent.forEachAncestor(callback);
-      return stop;
+    let node = this._parent;
+    while (node) {
+      const stop = callback(node);
+      if (stop) return stop;
+      node = node._parent;
     }
   }
 
   fromRootToParentUntil(callback) {
     const ancestors = [];
-    let dlt = this._parent;
-    while (dlt) {
-      ancestors.push(dlt);
-      dlt = dlt._parent;
+    let node = this._parent;
+    while (node) {
+      ancestors.push(node);
+      node = node._parent;
     }
-    for (let ancestor of ancestors.reverse()) {
+    for (let i = ancestors.length - 1; i >= 0; i++) {
+      const ancestor = ancestors[i];
       const stop = callback(ancestor);
       if (stop) return stop;
     }
